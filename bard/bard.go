@@ -18,7 +18,7 @@ func NewBard(sessionID string) *BardApi {
 	return &BardApi{
 		BaseURL: baseURL,
 		Headers: http.Header{
-			"Host":          []string{"bard.google.com"},
+			"Host":          []string{BardHost},
 			"X-Same-Domain": []string{"1"},
 			"User-Agent":    []string{"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"},
 			"Content-Type":  []string{"application/x-www-form-urlencoded;charset=UTF-8"},
@@ -94,25 +94,38 @@ func (b *BardApi) sendRequest(params string, requestBody url.Values) (*http.Resp
 	return client.Do(request)
 }
 
-func (b *BardApi) findImage(repondid string, msg [][]interface{}) (string, error) {
+func (b *BardApi) findImage(repondid string, msg []interface{}) (string, error) {
 	retImageurl := ""
-
+	for _, item := range msg {
+		iteminfo := item.([]interface{})
+		imgurl := iteminfo[0].([]interface{})
+		fullname := iteminfo[2].(string)
+		fmt.Printf("%s--->%v\n", fullname, imgurl)
+		if repondid == fullname {
+			retImageurl = imgurl[0].([]interface{})[0].(string)
+			break
+		}
+	}
 	return retImageurl, nil
 }
 
-func (b *BardApi) replaceImageUrls(input string, msg [][]interface{}) string {
+func (b *BardApi) replaceImageUrls(input string, msg []interface{}) string {
 	re := regexp.MustCompile(Match_Image)
 	matches := re.FindAllStringSubmatch(input, -1)
+	if len(msg) == 5 {
+		metainfo := msg[4] //there is how many respond
 
-	for _, match := range matches {
-		url, err := b.findImage(match[0], msg)
-		if err == nil {
-			replacement := fmt.Sprintf("'%s(%s)'", match[0], url)
-			input = re.ReplaceAllString(input, replacement)
-		} else {
-			fmt.Println("image url not found!")
+		for _, match := range matches {
+			url, err := b.findImage(match[0], metainfo.([]interface{}))
+			if err == nil {
+				replacement := fmt.Sprintf("<img alt='%s' src='%s'>", match[1], url)
+				input = strings.Replace(input, match[0], replacement, -1)
+
+			} else {
+				fmt.Println("image url not found!")
+			}
+
 		}
-
 	}
 
 	return input
@@ -154,7 +167,26 @@ func (b *BardApi) handleResponse(response *http.Response) (*ResponseBody, error)
 	if !ok {
 		return nil, fmt.Errorf("invalid conversationID: %s", responseMessage[1][0])
 	}
-	question, ok := responseMessage[2][0].([]interface{})[0].(string)
+	resp2 := responseMessage[2]
+	resp1 := responseMessage[0][0]
+	if resp2 == nil {
+
+		responseStruct := &ResponseBody{
+			ResponseID:     responseID,
+			ConversationID: conversationID,
+			Question:       resp1.(string),
+			Choices: []Choice{
+				Choice{
+					ChoiceID: "xxx",
+					Answer:   resp1.(string),
+				},
+			},
+		}
+		return responseStruct, nil
+	}
+
+	question, ok := resp2[0].([]interface{})[0].(string)
+
 	if !ok {
 		return nil, fmt.Errorf("invalid question: %s", responseMessage[2][0])
 	}
@@ -170,10 +202,14 @@ func (b *BardApi) handleResponse(response *http.Response) (*ResponseBody, error)
 		if !ok {
 			continue
 		}
-
+		//meta := c.([]interface{})
+		meta := c.([]interface{})
+		if len(meta) == 5 {
+			answer = b.replaceImageUrls(answer, meta)
+		}
 		choice := Choice{
 			ChoiceID: choiceID,
-			Answer:   b.replaceImageUrls(answer, responseMessage),
+			Answer:   answer,
 		}
 
 		choices = append(choices, choice)
