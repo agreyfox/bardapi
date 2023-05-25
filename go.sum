@@ -1,5 +1,3 @@
-github.com/NoahAmethyst/bingchat-api v1.0.0 h1:OggUzPcvgnwrZO8xdss0SB7BZetI+7XrUlxEX0dKcFA=
-github.com/NoahAmethyst/bingchat-api v1.0.0/go.mod h1:X17MzvszoLHhKRXeVqMZtUXEJ6L1aPL9HVnswJc61Hw=
 github.com/bwmarrin/snowflake v0.3.0 h1:xm67bEhkKh6ij1790JB83OujPR5CzNe8QuQqAgISZN0=
 github.com/bwmarrin/snowflake v0.3.0/go.mod h1:NdZxfVWX+oR6y2K0o6qAYv6gIOP9rjG0/E9WsDpxqwE=
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=

@@ -1,4 +1,4 @@
-module github.com/NoahAmethyst/bingchat-api
+module github.com/agreyfox/bardapi/bingchat
 
 go 1.19
 
