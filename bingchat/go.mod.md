@@ -1,9 +1,8 @@
-module github.com/agreyfox/bardapi
+module github.com/NoahAmethyst/bingchat-api
 
-go 1.20
+go 1.19
 
 require (
-	github.com/NoahAmethyst/bingchat-api v1.0.0
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
