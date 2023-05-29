@@ -79,7 +79,17 @@ type MessageResp struct {
 	Target string `json:"target"`
 	Item   struct {
 		Messages []struct {
-			MessageType string `json:"messageType,omitempty"`
+			Text          string `json:"text,omitempty"`
+			HiddenText    string `json:"hiddenText,omitempty"`
+			Author        string `json:"author,omitempty"`
+			MessageType   string `json:"messageType,omitempty"`
+			AdaptiveCards []struct {
+				Body []struct {
+					Type string `json:"type"`
+					Text string `json:"text"`
+					Wrap string `json:"wrap"`
+				}
+			} `json:"adaptiveCards,omitempty"`
 		} `json:"messages"`
 	} `json:"item"`
 	Arguments []struct {

@@ -4,6 +4,7 @@ import "net/http"
 
 const Prefix_Image = "[Image of "
 const Match_Image = `\[Image of (.+?)\]`
+const Match_Video = `\[Video of (.+?)\]`
 const BardHost = "bard.google.com"
 const BardBaseURL = "https://bard.google.com"
 

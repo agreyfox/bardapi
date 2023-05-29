@@ -187,6 +187,7 @@ type MsgResp struct {
 	Suggest []string
 	Notify  chan string
 	Title   string
+	Source  []string //TODO
 }
 
 // SendMessage send message to bing chat and return a response with message(string) channel
@@ -219,6 +220,8 @@ func (b *BingChatHub) SendMessage(msg string) (*MsgResp, error) {
 		defer close(msgRespChannel.Notify)
 		for {
 			_, data, err := b.wsConn.ReadMessage()
+			//fmt.Println(string(data))
+
 			if err != nil {
 				log.Println(err)
 				b.Reset()
@@ -235,6 +238,64 @@ func (b *BingChatHub) SendMessage(msg string) (*MsgResp, error) {
 			resp := MessageResp{}
 			_ = json.Unmarshal(data, &resp)
 
+			if resp.Type == 2 {
+
+				//fmt.Println("%v", resp)
+				msgRespChannel.Source = []string{}
+				if len(resp.Item.Messages) > 0 {
+					botanswer := "\n=======botVerse=========\n"
+					log.Println(string(data))
+
+					for _, message := range resp.Item.Messages {
+
+						if message.Author == "bot" {
+							testtest := message.Text
+
+							ll := len(testtest)
+							if ll == 0 {
+								continue
+							}
+							if ll < 21 {
+								ll -= 1
+							} else {
+								ll = 20
+							}
+							testText := testtest[:ll]
+							adcard := message.AdaptiveCards
+							if len(adcard) > 0 {
+								for _, item := range adcard {
+									for _, body := range item.Body {
+										text := body.Text
+										if len(text) == 0 {
+											continue
+										}
+										n := strings.Index(text, testText)
+										if n < 0 {
+											botanswer += text
+											msgRespChannel.Source = append(msgRespChannel.Source, text)
+
+										} else if n == 0 {
+											log.Println(text)
+										} else {
+											botanswer += text[:n]
+											msgRespChannel.Source = append(msgRespChannel.Source, text[:n])
+
+										}
+
+									}
+								}
+
+							}
+
+						}
+
+					}
+					msgRespChannel.Notify <- botanswer + "\n"
+				}
+				//_ = b.wsConn.Close()
+				b.Reset()
+				return
+			}
 			for _, message := range resp.Item.Messages {
 				if message.MessageType == "Disengaged" {
 					b.Reset()
@@ -259,6 +320,7 @@ func (b *BingChatHub) SendMessage(msg string) (*MsgResp, error) {
 				}
 
 				if resp.Arguments[0].Messages[0].MessageType == "Disengaged" {
+					fmt.Printf("%v", resp.Item)
 					b.Reset()
 
 					break
@@ -274,10 +336,7 @@ func (b *BingChatHub) SendMessage(msg string) (*MsgResp, error) {
 				msgRespChannel.Notify <- msg[len(lastMsg):]
 				lastMsg = msg
 			}
-			if resp.Type == 2 {
-				_ = b.wsConn.Close()
-				break
-			}
+
 		}
 	}()
 

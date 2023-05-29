@@ -112,7 +112,7 @@ func (b *BardApi) findImage(repondid string, msg []interface{}) (string, error) 
 func (b *BardApi) replaceImageUrls(input string, msg []interface{}) string {
 	re := regexp.MustCompile(Match_Image)
 	matches := re.FindAllStringSubmatch(input, -1)
-	if len(msg) == 5 {
+	if len(msg) >= 5 {
 		metainfo := msg[4] //there is how many respond
 
 		for _, match := range matches {
@@ -131,6 +131,29 @@ func (b *BardApi) replaceImageUrls(input string, msg []interface{}) string {
 	return input
 }
 
+func (b *BardApi) replaceVideoUrls(input string, msg []interface{}) string {
+	re := regexp.MustCompile(Match_Video)
+	matches := re.FindAllStringSubmatch(input, -1)
+
+	if len(msg) >= 5 {
+		metainfo := msg[4] //there is how many respond
+
+		for _, match := range matches {
+			url, err := b.findImage(match[0], metainfo.([]interface{}))
+			thumbpic, err := b.findImage(match[0], metainfo.([]interface{}))
+			if err == nil {
+				replacement := fmt.Sprintf("[![%s](%s)](%s) ]", match[1], thumbpic, url)
+				input = strings.Replace(input, match[0], replacement, -1)
+
+			} else {
+				fmt.Println("image url not found!")
+			}
+
+		}
+	}
+
+	return input
+}
 func (b *BardApi) handleResponse(response *http.Response) (*ResponseBody, error) {
 	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -203,9 +226,11 @@ func (b *BardApi) handleResponse(response *http.Response) (*ResponseBody, error)
 			continue
 		}
 		//meta := c.([]interface{})
+
 		meta := c.([]interface{})
-		if len(meta) == 5 {
+		if len(meta) >= 5 {
 			answer = b.replaceImageUrls(answer, meta)
+			answer = b.replaceVideoUrls(answer, meta)
 		}
 		choice := Choice{
 			ChoiceID: choiceID,
