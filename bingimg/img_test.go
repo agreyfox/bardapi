@@ -8,7 +8,7 @@ import (
 func TestNewBingImageClient(t *testing.T) {
 
 	bi, _ := NewImageGen(Cookie_U, false, "test.log")
-	img, err := bi.getImages("Film still of an elderly wise yellow man playing chess, medium shot, mid-shot")
+	img, err := bi.GetImages("Film still of an elderly wise yellow man playing chess, medium shot, mid-shot")
 	if err != nil {
 		t.Errorf("error %s", err)
 	}
@@ -16,5 +16,5 @@ func TestNewBingImageClient(t *testing.T) {
 		t.Logf(item)
 	}
 	bi.MakeThumbnail(true)
-	bi.saveImages(img, ".", "img")
+	bi.SaveImages(img, ".", "img")
 }

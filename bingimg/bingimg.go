@@ -49,8 +49,9 @@ func init() {
 
 // Debug function.
 func debug(debugFile string, textVar interface{}) {
+	
 	// helper function for debug
-	f, err := os.OpenFile(debugFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile("bingimg.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -161,7 +162,7 @@ func (c *ImageGen) UpdateHeader() {
 	c.headers = headers
 }
 
-func (self *ImageGen) getImages(prompt string) ([]string, error) {
+func (self *ImageGen) GetImages(prompt string) ([]string, error) {
 	// Fetches image links from Bing
 	// Parameters:
 	// prompt: string
@@ -345,8 +346,9 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-func (c *ImageGen) saveImages(links []string, outputDir string, fileName string) error {
+func (c *ImageGen) SaveImages(links []string, outputDir string, fileName string) ([]string,error) {
 	ctx := context.Background()
+	ret:=[]string{}
 	// Saves images to output directory
 	if c.debugFile == "" {
 		debug(c.debugFile, downloadMessage)
@@ -356,7 +358,7 @@ func (c *ImageGen) saveImages(links []string, outputDir string, fileName string)
 	}
 	// Create the output directory if it does not exist
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return err
+		return ret,err
 	}
 	// Use a prefix for the file name if provided
 	prefix := ""
@@ -368,10 +370,10 @@ func (c *ImageGen) saveImages(links []string, outputDir string, fileName string)
 
 	for _, link := range links {
 		// Find a unique file name for the image
-		filePath := ""
+		afilePath := ""
 		for {
-			filePath = filepath.Join(outputDir, fmt.Sprintf("%s%d.jpeg", prefix, jpegIndex))
-			if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			afilePath = filepath.Join(outputDir, fmt.Sprintf("%s%d.jpeg", prefix, jpegIndex))
+			if _, err := os.Stat(afilePath); os.IsNotExist(err) {
 				break
 			}
 			jpegIndex++
@@ -379,30 +381,30 @@ func (c *ImageGen) saveImages(links []string, outputDir string, fileName string)
 		// Make a GET request to the link
 		req, err := http.NewRequestWithContext(ctx, "GET", link, nil)
 		if err != nil {
-			return err
+			return ret,err
 		}
 		resp, err := c.session.Do(req)
 		if err != nil {
-			return err
+			return ret,err
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("invalid status code: %d", resp.StatusCode)
+			return ret,fmt.Errorf("invalid status code: %d", resp.StatusCode)
 		}
 		// Create and open the output file
-		outputFile, err := os.Create(filePath)
+		outputFile, err := os.Create(afilePath)
 		if err != nil {
-			return err
+			return ret,err
 		}
 		defer outputFile.Close()
 		// Copy the response body to the output file
 		if _, err := io.Copy(outputFile, resp.Body); err != nil {
-			return err
+			return ret,err
 		}
 
 		// Check for inappropriate contents in the image
-		if c.isBadImage(filePath) {
-			return fmt.Errorf("inappropriate contents found in the generated images. Please try again or try another prompt")
+		if c.isBadImage(afilePath) {
+			return ret,fmt.Errorf("inappropriate contents found in the generated images. Please try again or try another prompt")
 		} else {
 			if c.Thumbnail {
 				wg.Add(1)
@@ -410,9 +412,9 @@ func (c *ImageGen) saveImages(links []string, outputDir string, fileName string)
 					defer func() {
 						wg.Done()
 					}()
-
+					afilePath :=filepath.Join(outputDir, fmt.Sprintf("%s%d.jpeg", pre, jpi))
 					thumbfilePath := filepath.Join(outputDir, fmt.Sprintf("%s%d.thumb.jpeg", pre, jpi))
-					imgfile, err := os.Open(filePath)
+					imgfile, err := os.Open(afilePath)
 					if err != nil {
 						fmt.Println("error:", err)
 						return
@@ -441,16 +443,20 @@ func (c *ImageGen) saveImages(links []string, outputDir string, fileName string)
 					out.Close()
 					imgfile.Close()
 					fmt.Println("Create Thumbnail:", thumbfilePath)
-
+					targetfilename := filepath.Base(thumbfilePath)
+					ret = append(ret, targetfilename)
 				}(prefix, jpegIndex, &wg)
 
+			}else{
+				targetfilename := filepath.Base(afilePath)
+				ret=append(ret, targetfilename)
+				fmt.Println("use origin file as output :",targetfilename)
 			}
 		}
 
 	}
-
 	wg.Wait()
-	return nil
+	return ret,nil
 }
 
 func (self *ImageGen) isBadImage(filePath string) bool {
