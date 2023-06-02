@@ -33,7 +33,7 @@ To get started with the project, follow these steps:
 1. Clone the repository:
 
    ```shell
-   git clone https://github.com/your-username/your-repo.git
+   git clone https://github.com/agreyfox/bardapi.git
    ```
 
 2. Install Go and set up your Go environment. Refer to the official Go documentation for instructions.
@@ -41,7 +41,15 @@ To get started with the project, follow these steps:
    ```shell
    go get -u ./...
    ```
-4. Configure the necessary API keys and credentials by following the instructions in the configuration file.
+4. Configure the necessary cookie information by following the instructions
+
+| Project            | Cookie Name      | Value Example                                    |
+| ------------------ | ---------------- | ------------------------------------------------ |
+| bard               | \_\_Secure-1PSID | XAhS5XJUzxxxxxxxx                                |
+| bing               | all cookies      | Use "Cookie Editor" to save cookies to JSON file |
+| Bing Image Creator | \_U              | 1uAhsjMwUpAXXXXXXXXXXXXXXXXXX                    |
+
+.
 
 ## Usage
 
