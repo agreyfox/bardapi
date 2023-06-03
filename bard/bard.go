@@ -94,19 +94,26 @@ func (b *BardApi) sendRequest(params string, requestBody url.Values) (*http.Resp
 	return client.Do(request)
 }
 
-func (b *BardApi) findImage(repondid string, msg []interface{}) (string, error) {
+func (b *BardApi) findImage(repondid string, msg []interface{}) (string, string ,error) {
 	retImageurl := ""
+	retfulImageurl := ""
 	for _, item := range msg {
 		iteminfo := item.([]interface{})
-		imgurl := iteminfo[0].([]interface{})
+		if len(iteminfo) ==0 {
+			continue
+		}
+		fullimgurl := iteminfo[0].([]interface{})
+		shortimgurl := iteminfo[3].([]interface{})
 		fullname := iteminfo[2].(string)
-		fmt.Printf("%s--->%v\n", fullname, imgurl)
-		if repondid == fullname {
-			retImageurl = imgurl[0].([]interface{})[0].(string)
+		//fmt.Printf("%s--->%v\n", fullname, fullimgurl,shortimgurl)
+		if repondid == fullname && len(shortimgurl)>0{
+
+			retImageurl = shortimgurl[0].([]interface{})[0].(string)
+			retfulImageurl= fullimgurl[0].([]interface{})[0].(string)
 			break
 		}
 	}
-	return retImageurl, nil
+	return retImageurl, retfulImageurl, nil
 }
 
 func (b *BardApi) replaceImageUrls(input string, msg []interface{}) string {
@@ -116,10 +123,14 @@ func (b *BardApi) replaceImageUrls(input string, msg []interface{}) string {
 		metainfo := msg[4] //there is how many respond
 
 		for _, match := range matches {
-			url, err := b.findImage(match[0], metainfo.([]interface{}))
+			if len(match)==0{
+				continue
+			}
+			url, fullurl,err := b.findImage(match[0], metainfo.([]interface{}))
 			if err == nil {
-				replacement := fmt.Sprintf("<img alt='%s' src='%s'>", match[1], url)
+				replacement := fmt.Sprintf("<img alt='%s' src='%s' width='50%'>", match[1], url)
 				input = strings.Replace(input, match[0], replacement, -1)
+				fmt.Printf("image:%s,thumbnail:%s,full:%s\n",match[1],url,fullurl)
 
 			} else {
 				fmt.Println("image url not found!")
@@ -139,12 +150,15 @@ func (b *BardApi) replaceVideoUrls(input string, msg []interface{}) string {
 		metainfo := msg[4] //there is how many respond
 
 		for _, match := range matches {
-			url, err := b.findImage(match[0], metainfo.([]interface{}))
-			thumbpic, err := b.findImage(match[0], metainfo.([]interface{}))
+			if len(match)==0{
+				continue
+			}
+			url,fullurl, err := b.findImage(match[0], metainfo.([]interface{}))
+			//thumbpic, err := b.findImage(match[0], metainfo.([]interface{}))
 			if err == nil {
-				replacement := fmt.Sprintf("[![%s](%s)](%s) ]", match[1], thumbpic, url)
+				replacement := fmt.Sprintf("[![%s](%s)](width=50) ]", match[1], url, fullurl)
 				input = strings.Replace(input, match[0], replacement, -1)
-
+				
 			} else {
 				fmt.Println("image url not found!")
 			}
