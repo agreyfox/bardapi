@@ -244,7 +244,7 @@ func (b *BingChatHub) SendMessage(msg string) (*MsgResp, error) {
 				msgRespChannel.Source = []string{}
 				if len(resp.Item.Messages) > 0 {
 					botanswer := "\n=======botVerse=========\n"
-					log.Println(string(data))
+					fmt.Println(string(data))
 
 					for _, message := range resp.Item.Messages {
 
