@@ -14,7 +14,11 @@ import (
 
 func NewBard(sessionID string) *BardApi {
 	baseURL := BardBaseURL
-
+	bardOption := Options{
+		ConversationID: "",
+		ResponseID:     "",
+		ChoiceID:       "",
+	}
 	return &BardApi{
 		BaseURL: baseURL,
 		Headers: http.Header{
@@ -26,7 +30,8 @@ func NewBard(sessionID string) *BardApi {
 			"Referer":       []string{baseURL + "/"},
 			"Cookie":        []string{"__Secure-1PSID=" + sessionID},
 		},
-		RequestID: rand.Int63n(9999),
+		RequestID: rand.Int63n(19999),
+		Options:   &bardOption,
 	}
 }
 
@@ -51,7 +56,7 @@ func (b *BardApi) getSNlM0e() (string, error) {
 	return snlm0e, nil
 }
 
-func (b *BardApi) generateRequestBody(message string, options Options) (url.Values, error) {
+func (b *BardApi) generateRequestBody(message string, options *Options) (url.Values, error) {
 	messageBytes, err := json.Marshal([][]string{
 		{message},
 		nil,
@@ -94,22 +99,22 @@ func (b *BardApi) sendRequest(params string, requestBody url.Values) (*http.Resp
 	return client.Do(request)
 }
 
-func (b *BardApi) findImage(repondid string, msg []interface{}) (string, string ,error) {
+func (b *BardApi) findImage(repondid string, msg []interface{}) (string, string, error) {
 	retImageurl := ""
 	retfulImageurl := ""
 	for _, item := range msg {
 		iteminfo := item.([]interface{})
-		if len(iteminfo) ==0 {
+		if len(iteminfo) == 0 {
 			continue
 		}
 		fullimgurl := iteminfo[0].([]interface{})
 		shortimgurl := iteminfo[3].([]interface{})
 		fullname := iteminfo[2].(string)
 		//fmt.Printf("%s--->%v\n", fullname, fullimgurl,shortimgurl)
-		if repondid == fullname && len(shortimgurl)>0{
+		if repondid == fullname && len(shortimgurl) > 0 {
 
 			retImageurl = shortimgurl[0].([]interface{})[0].(string)
-			retfulImageurl= fullimgurl[0].([]interface{})[0].(string)
+			retfulImageurl = fullimgurl[0].([]interface{})[0].(string)
 			break
 		}
 	}
@@ -123,14 +128,14 @@ func (b *BardApi) replaceImageUrls(input string, msg []interface{}) string {
 		metainfo := msg[4] //there is how many respond
 
 		for _, match := range matches {
-			if len(match)==0{
+			if len(match) == 0 {
 				continue
 			}
-			url, fullurl,err := b.findImage(match[0], metainfo.([]interface{}))
+			url, fullurl, err := b.findImage(match[0], metainfo.([]interface{}))
 			if err == nil {
-				replacement := fmt.Sprintf("<img alt='%s' src='%s' width='50%'>", match[1], url)
+				replacement := fmt.Sprintf(`<img alt=%q src=%q width=%q>`, match[1], url, "50%")
 				input = strings.Replace(input, match[0], replacement, -1)
-				fmt.Printf("image:%s,thumbnail:%s,full:%s\n",match[1],url,fullurl)
+				fmt.Printf("image:%s,thumbnail:%s,full:%s\n", match[1], url, fullurl)
 
 			} else {
 				fmt.Println("image url not found!")
@@ -150,15 +155,15 @@ func (b *BardApi) replaceVideoUrls(input string, msg []interface{}) string {
 		metainfo := msg[4] //there is how many respond
 
 		for _, match := range matches {
-			if len(match)==0{
+			if len(match) == 0 {
 				continue
 			}
-			url,fullurl, err := b.findImage(match[0], metainfo.([]interface{}))
+			url, fullurl, err := b.findImage(match[0], metainfo.([]interface{}))
 			//thumbpic, err := b.findImage(match[0], metainfo.([]interface{}))
 			if err == nil {
-				replacement := fmt.Sprintf("[![%s](%s)](width=50) ]", match[1], url, fullurl)
+				replacement := fmt.Sprintf("[![%s](%s)](width=50) ]", match[1], url)
 				input = strings.Replace(input, match[0], replacement, -1)
-				
+				fmt.Printf("video:%s,thumbnail:%s,full:%s\n", match[1], url, fullurl)
 			} else {
 				fmt.Println("image url not found!")
 			}
@@ -191,11 +196,15 @@ func (b *BardApi) handleResponse(response *http.Response) (*ResponseBody, error)
 	}
 
 	var responseMessage [][]interface{}
-	err = json.Unmarshal([]byte(responseBody[0][2]), &responseMessage)
-	if err != nil {
+	fmt.Println(responseBody[0][2])
+	json.Unmarshal([]byte(responseBody[0][2]), &responseMessage)
+	/* if err != nil {
+		fmt.Println(err.Error())
 		return nil, err
+	} */
+	if responseMessage == nil {
+		return nil, fmt.Errorf("invalid response body: %s", responseBody)
 	}
-
 	responseID, ok := responseMessage[1][1].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid responseID: %s", responseMessage[1][1])
@@ -213,7 +222,7 @@ func (b *BardApi) handleResponse(response *http.Response) (*ResponseBody, error)
 			ConversationID: conversationID,
 			Question:       resp1.(string),
 			Choices: []Choice{
-				Choice{
+				{
 					ChoiceID: "xxx",
 					Answer:   resp1.(string),
 				},
@@ -266,18 +275,28 @@ func (b *BardApi) handleResponse(response *http.Response) (*ResponseBody, error)
 	return responseStruct, nil
 }
 
-func (b *BardApi) SendMessage(message string, options Options) (*ResponseBody, error) {
-	params := fmt.Sprintf("?bl=%s&_reqid=%d&rt=%s", "boq_assistant-bard-web-server_20230402.21_p0", b.RequestID, "c")
-	requestBody, err := b.generateRequestBody(message, options)
-	if err != nil {
+func (b *BardApi) SendMessage(message string) (*ResponseBody, error) {
 
-		return nil, nil
+	params := fmt.Sprintf("?bl=%s&_reqid=%d&rt=%s", "boq_assistant-bard-web-server_20230402.21_p0", b.RequestID, "c")
+	requestBody, err := b.generateRequestBody(message, b.Options)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
 	}
 
 	response, err := b.sendRequest(params, requestBody)
 	if err != nil {
-		return nil, nil
+		fmt.Println(err)
+		return nil, err
 	}
 
-	return b.handleResponse(response)
+	resp, err := b.handleResponse(response)
+	if err != nil {
+		return nil, err
+	} else {
+		b.Options.ConversationID = resp.ConversationID
+		b.Options.ResponseID = resp.ResponseID
+		b.Options.ChoiceID = resp.Choices[0].ChoiceID
+		return resp, nil
+	}
 }

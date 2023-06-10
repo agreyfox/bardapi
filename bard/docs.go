@@ -12,6 +12,7 @@ type BardApi struct {
 	BaseURL   string
 	Headers   http.Header
 	RequestID int64
+	Options   *Options
 }
 
 type Options struct {
